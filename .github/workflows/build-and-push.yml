@@ -29,6 +29,10 @@ jobs:
               POSTGRES_VERSION=17
               PATRONI_VERSION=4.0.6
             version-tag: "4.0.6-postgres17"
+          - service: barman
+            build-args: |
+              POSTGRES_VERSION=17
+            version-tag: "latest"
     
     permissions:
       contents: read
