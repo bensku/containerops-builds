@@ -2,20 +2,25 @@
 set -euo pipefail
 
 # Put secrets to config files
+shopt -s nullglob
 for f in /etc/barman-sources/*.conf; do
     envsubst < $f > /etc/barman.d/$(basename $f)
 done
 
 chown barman:barman /var/lib/barman
-touch /var/log/barman.log
-chown barman:barman /var/log/barman.log
+chown barman:barman /var/barman_restored || true
 
-# Sleep forever, but handle signals to exit cleanly
-# Why barman is run with podman exec is because container-ops
-# overlay networking is (too) closely coupled to container deployments
-pid=
-trap '[[ $pid ]] && kill $pid; exit' SIGINT
-trap '[[ $pid ]] && kill $pid; exit' SIGTERM
-tail -f /var/log/barman.log & pid=$!
-wait
-pid=
+touch /var/log/barman/barman.log
+chown barman:barman /var/log/barman/barman.log
+
+cleanup() {
+    kill -TERM $tailpid $cronpid
+    wait $tailpid $cronpid
+}
+trap cleanup SIGINT SIGTERM
+
+tail -f /var/log/barman/barman.log & tailpid=$!
+cron -f & cronpid=$!
+
+wait -n
+cleanup
